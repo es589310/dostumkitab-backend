@@ -90,15 +90,18 @@ debug.log
 logs/
 
 # 🔒 CRITICAL SECURITY - Environment Variables
+# .env
+# .env.local
+# .env.development
+# .env.production
+# .env.staging
+# .env.test
+# .env.*.local
+# .env.backup
+# .env.old
+
 .env
-.env.local
-.env.development
-.env.production
-.env.staging
-.env.test
-.env.*.local
-.env.backup
-.env.old
+.env.*
 
 # 🔒 CRITICAL SECURITY - Production Credentials
 credentials.json
