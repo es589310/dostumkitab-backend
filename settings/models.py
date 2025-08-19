@@ -11,7 +11,7 @@ class SiteSettings(models.Model):
     email = models.EmailField(default="info@faziletkitab.az", verbose_name="E-mail")
     address = models.TextField(blank=True, verbose_name="Ünvan")
     coordinates = models.CharField(max_length=50, blank=True, verbose_name="Koordinatlar (lat,lng)", help_text="Məsələn: 40.4113084,49.9703213")
-    working_hours = models.CharField(max_length=100, default="Bazar ertəsi - Cümə: 09:00-18:00", verbose_name="İş Saatları")
+    working_hours = models.CharField(max_length=100, blank=True, null=True, verbose_name="İş Saatları")
     copyright_year = models.IntegerField(default=2024, verbose_name="Copyright İli")
     whatsapp_number = models.CharField(max_length=20, default="+994501234567", verbose_name="WhatsApp Nömrəsi")
     
