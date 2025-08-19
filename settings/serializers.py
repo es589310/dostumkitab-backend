@@ -6,9 +6,9 @@ class SiteSettingsSerializer(serializers.ModelSerializer):
         model = SiteSettings
         fields = [
             'site_name', 'site_description', 'phone', 'email', 
-            'address', 'working_hours', 'copyright_year', 'facebook', 'instagram', 
-            'twitter', 'youtube', 'whatsapp_number',
-            'navbar_logo', 'navbar_logo_imagekit_url', 'footer_logo', 'footer_logo_imagekit_url'
+            'address', 'working_hours', 'copyright_year', 'whatsapp_number',
+            'coordinates', 'navbar_logo', 'navbar_logo_imagekit_url', 
+            'footer_logo', 'footer_logo_imagekit_url'
         ]
 
 
