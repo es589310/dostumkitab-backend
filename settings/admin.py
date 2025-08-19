@@ -14,10 +14,6 @@ class SiteSettingsAdmin(admin.ModelAdmin):
         ('Copyright', {
             'fields': ('copyright_year',)
         }),
-        ('Sosial Media', {
-            'fields': ('facebook', 'instagram', 'twitter', 'youtube'),
-            'classes': ('collapse',)
-        }),
     )
     
     def has_add_permission(self, request):
