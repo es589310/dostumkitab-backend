@@ -63,7 +63,9 @@ class CartItem(models.Model):
     @property
     def total_price(self):
         """Bu elementin ümumi qiyməti"""
-        return self.book.price * self.quantity
+        if self.price is not None and self.quantity is not None:
+            return self.price * self.quantity
+        return 0
 
 class Order(models.Model):
     """Sifarişlər"""
