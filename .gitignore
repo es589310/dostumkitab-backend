@@ -100,8 +100,8 @@ logs/
 # .env.backup
 # .env.old
 
-.env
 .env.*
+.env
 
 # 🔒 CRITICAL SECURITY - Production Credentials
 credentials.json

@@ -128,7 +128,10 @@ class Order(models.Model):
         ordering = ['-created_at']
     
     def __str__(self):
-        return f"Sifariş #{self.order_number} - {self.user.username}"
+        if self.user:
+            return f"Sifariş #{self.order_number} - {self.user.username}"
+        else:
+            return f"Sifariş #{self.order_number} - Anonim İstifadəçi"
     
     def save(self, *args, **kwargs):
         if not self.order_number:
