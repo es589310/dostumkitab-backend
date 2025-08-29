@@ -270,25 +270,32 @@ def get_social_media_links(request):
             is_hidden=False
         ).order_by('order', 'platform')
         
-        # Serializer cache istifadə et
-        from lib.serializer_cache import SerializerCacheManager
-        
-        cached_serializer = SerializerCacheManager.get_cached_serializer(
-            SocialMediaLinkSerializer, 
-            links, 
-            {'many': True}
-        )
-        
-        if cached_serializer:
-            serializer = cached_serializer
-        else:
-            serializer = SocialMediaLinkSerializer(links, many=True)
-            # Cache-ə yaz
-            SerializerCacheManager.cache_serializer(
+        # Serializer cache istifadə et (fallback ilə)
+        try:
+            import sys
+            import os
+            sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            from lib.serializer_cache import SerializerCacheManager
+            
+            cached_serializer = SerializerCacheManager.get_cached_serializer(
                 SocialMediaLinkSerializer, 
                 links, 
                 {'many': True}
             )
+            
+            if cached_serializer:
+                serializer = cached_serializer
+            else:
+                serializer = SocialMediaLinkSerializer(links, many=True)
+                # Cache-ə yaz
+                SerializerCacheManager.cache_serializer(
+                    SocialMediaLinkSerializer, 
+                    links, 
+                    {'many': True}
+                )
+        except ImportError:
+            # Fallback - normal serializer
+            serializer = SocialMediaLinkSerializer(links, many=True)
         
         # Data cache-ə yaz (10 dəqiqə)
         cache.set(cache_key, serializer.data, 600)

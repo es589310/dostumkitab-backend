@@ -7,7 +7,17 @@ from django.views.decorators.cache import cache_page
 from django.utils.decorators import method_decorator
 from .models import SiteSettings, Logo
 from .serializers import SiteSettingsSerializer, LogoSerializer
-from lib.serializer_cache import SerializerCacheManager
+import sys
+import os
+
+# Add the project root to Python path
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+try:
+    from lib.serializer_cache import SerializerCacheManager
+except ImportError:
+    # Fallback if serializer cache is not available
+    SerializerCacheManager = None
 
 class SiteSettingsView(RetrieveAPIView):
     """Sayt tənzimləmələri"""
@@ -32,22 +42,27 @@ class SiteSettingsView(RetrieveAPIView):
         return settings
     
     def get_serializer(self, *args, **kwargs):
-        # Serializer cache-dən al
-        cached_serializer = SerializerCacheManager.get_cached_serializer(
-            self.serializer_class, 
-            args, 
-            kwargs
-        )
+        # Serializer cache yalnız SerializerCacheManager mövcud olduqda istifadə et
+        if SerializerCacheManager:
+            # Serializer cache-dən al
+            cached_serializer = SerializerCacheManager.get_cached_serializer(
+                self.serializer_class, 
+                args, 
+                kwargs
+            )
+            
+            if cached_serializer:
+                return cached_serializer
+            
+            # Yeni serializer yarad və cache et
+            return SerializerCacheManager.cache_serializer(
+                self.serializer_class, 
+                args, 
+                kwargs
+            )
         
-        if cached_serializer:
-            return cached_serializer
-        
-        # Yeni serializer yarad və cache et
-        return SerializerCacheManager.cache_serializer(
-            self.serializer_class, 
-            args, 
-            kwargs
-        )
+        # Fallback - normal serializer
+        return super().get_serializer(*args, **kwargs)
 
 @api_view(['GET'])
 def whatsapp_number(request):
@@ -95,19 +110,24 @@ class LogoView(RetrieveAPIView):
         return logo
     
     def get_serializer(self, *args, **kwargs):
-        # Serializer cache-dən al
-        cached_serializer = SerializerCacheManager.get_cached_serializer(
-            self.serializer_class, 
-            args, 
-            kwargs
-        )
+        # Serializer cache yalnız SerializerCacheManager mövcud olduqda istifadə et
+        if SerializerCacheManager:
+            # Serializer cache-dən al
+            cached_serializer = SerializerCacheManager.get_cached_serializer(
+                self.serializer_class, 
+                args, 
+                kwargs
+            )
+            
+            if cached_serializer:
+                return cached_serializer
+            
+            # Yeni serializer yarad və cache et
+            return SerializerCacheManager.cache_serializer(
+                self.serializer_class, 
+                args, 
+                kwargs
+            )
         
-        if cached_serializer:
-            return cached_serializer
-        
-        # Yeni serializer yarad və cache et
-        return SerializerCacheManager.cache_serializer(
-            self.serializer_class, 
-            args, 
-            kwargs
-        )
+        # Fallback - normal serializer
+        return super().get_serializer(*args, **kwargs)
