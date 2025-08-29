@@ -28,8 +28,12 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 # Redis Cache Configuration with Fallback
 REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379')
 
+# Redis URL-i SSL olmadan istifadə et
+if REDIS_URL.startswith('rediss://'):
+    REDIS_URL = REDIS_URL.replace('rediss://', 'redis://')
+
 try:
-    # Redis cache konfiqurasiyası
+    # Redis cache konfiqurasiyası - SSL verification deaktiv
     CACHES = {
         'default': {
             'BACKEND': 'django_redis.cache.RedisCache',
@@ -42,10 +46,12 @@ try:
                 },
                 'SOCKET_CONNECT_TIMEOUT': 5,
                 'SOCKET_TIMEOUT': 5,
-                # SSL problemi üçün
-                'SSL': True,
-                'SSL_CERT_REQS': None,  # SSL certificate verification-i deaktiv et
+                # SSL problemi üçün - tamamilə deaktiv
+                'SSL': False,  # SSL deaktiv et
+                'SSL_CERT_REQS': None,
                 'SSL_CA_CERTS': None,
+                'SSL_CHECK_HOSTNAME': False,
+                'SSL_VERIFY_MODE': None,
             },
             'KEY_PREFIX': 'kitab_cache',
             'TIMEOUT': 300,  # 5 dəqiqə default timeout
