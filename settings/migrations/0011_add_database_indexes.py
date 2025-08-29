@@ -7,12 +7,7 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        # SiteSettings üçün index
-        migrations.RunSQL(
-            "CREATE INDEX IF NOT EXISTS idx_sitesettings_active ON settings_sitesettings(is_active);",
-            "DROP INDEX IF EXISTS idx_sitesettings_active;"
-        ),
-        # Logo üçün index
+        # Logo üçün index (SiteSettings-də is_active yoxdur)
         migrations.RunSQL(
             "CREATE INDEX IF NOT EXISTS idx_logo_active ON settings_logo(is_active);",
             "DROP INDEX IF EXISTS idx_logo_active;"
