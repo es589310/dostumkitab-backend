@@ -25,38 +25,60 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 # WhiteNoise configuration for Heroku
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-# Redis Cache Configuration
+# Redis Cache Configuration with Fallback
 REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379')
 
-CACHES = {
-    'default': {
-        'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': REDIS_URL,
-        'OPTIONS': {
-            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-            'CONNECTION_POOL_KWARGS': {
-                'max_connections': 20,
-                'retry_on_timeout': True,
+try:
+    # Redis cache konfiqurasiyası
+    CACHES = {
+        'default': {
+            'BACKEND': 'django_redis.cache.RedisCache',
+            'LOCATION': REDIS_URL,
+            'OPTIONS': {
+                'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+                'CONNECTION_POOL_KWARGS': {
+                    'max_connections': 20,
+                    'retry_on_timeout': True,
+                },
+                'SOCKET_CONNECT_TIMEOUT': 5,
+                'SOCKET_TIMEOUT': 5,
+                # SSL problemi üçün
+                'SSL': True,
+                'SSL_CERT_REQS': None,  # SSL certificate verification-i deaktiv et
+                'SSL_CA_CERTS': None,
             },
-            'SOCKET_CONNECT_TIMEOUT': 5,
-            'SOCKET_TIMEOUT': 5,
-        },
-        'KEY_PREFIX': 'kitab_cache',
-        'TIMEOUT': 300,  # 5 dəqiqə default timeout
+            'KEY_PREFIX': 'kitab_cache',
+            'TIMEOUT': 300,  # 5 dəqiqə default timeout
+        }
     }
-}
-
-# Cache middleware
-MIDDLEWARE = [
-    'django.middleware.cache.UpdateCacheMiddleware',  # Cache response
-    *MIDDLEWARE,
-    'django.middleware.cache.FetchFromCacheMiddleware',  # Cache request
-]
-
-# Cache settings
-CACHE_MIDDLEWARE_SECONDS = 300  # 5 dəqiqə
-CACHE_MIDDLEWARE_KEY_PREFIX = 'kitab_middleware'
-CACHE_MIDDLEWARE_ALIAS = 'default'
+    
+    # Cache middleware
+    MIDDLEWARE = [
+        'django.middleware.cache.UpdateCacheMiddleware',  # Cache response
+        *MIDDLEWARE,
+        'django.middleware.cache.FetchFromCacheMiddleware',  # Cache request
+    ]
+    
+    # Cache settings
+    CACHE_MIDDLEWARE_SECONDS = 300  # 5 dəqiqə
+    CACHE_MIDDLEWARE_KEY_PREFIX = 'kitab_middleware'
+    CACHE_MIDDLEWARE_ALIAS = 'default'
+    
+except Exception as e:
+    print(f"Redis cache konfiqurasiyası uğursuz oldu: {e}")
+    print("Fallback local memory cache istifadə olunur...")
+    
+    # Fallback local memory cache
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+            'LOCATION': 'unique-snowflake',
+            'TIMEOUT': 300,
+        }
+    }
+    
+    # Cache middleware deaktiv et
+    MIDDLEWARE = MIDDLEWARE
 
 # Email
 EMAIL_HOST = os.environ.get("EMAIL_HOST", "smtp.gmail.com")
