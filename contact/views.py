@@ -9,6 +9,7 @@ from django.utils import timezone
 from django.core.exceptions import ObjectDoesNotExist
 import logging
 import concurrent.futures
+from django.core.cache import cache
 
 from .models import ContactMessage, SocialMediaLink
 from .serializers import ContactMessageSerializer, SocialMediaLinkSerializer
@@ -252,11 +253,45 @@ def get_social_media_links(request):
     Aktiv və gizlənməmiş sosial media linklərini qaytarır - Production Ready
     """
     try:
+        # Cache key
+        cache_key = 'social_media_links'
+        
+        # Cache-dən al
+        cached_links = cache.get(cache_key)
+        if cached_links:
+            return Response({
+                'links': cached_links,
+                'success': True
+            })
+        
+        # Database-dən al
         links = SocialMediaLink.objects.filter(
             is_active=True, 
             is_hidden=False
         ).order_by('order', 'platform')
-        serializer = SocialMediaLinkSerializer(links, many=True)
+        
+        # Serializer cache istifadə et
+        from lib.serializer_cache import SerializerCacheManager
+        
+        cached_serializer = SerializerCacheManager.get_cached_serializer(
+            SocialMediaLinkSerializer, 
+            links, 
+            {'many': True}
+        )
+        
+        if cached_serializer:
+            serializer = cached_serializer
+        else:
+            serializer = SocialMediaLinkSerializer(links, many=True)
+            # Cache-ə yaz
+            SerializerCacheManager.cache_serializer(
+                SocialMediaLinkSerializer, 
+                links, 
+                {'many': True}
+            )
+        
+        # Data cache-ə yaz (10 dəqiqə)
+        cache.set(cache_key, serializer.data, 600)
         
         return Response({
             'links': serializer.data,

@@ -1,4 +1,5 @@
 from django.db import models
+from django.core.cache import cache
 
 # Create your models here.
 
@@ -33,6 +34,52 @@ class SiteSettings(models.Model):
         """Tək instance qaytarır"""
         settings, created = cls.objects.get_or_create(id=1)
         return settings
+    
+    @property
+    def cached_navbar_logo_url(self):
+        """Cache edilmiş navbar logo URL"""
+        cache_key = f'navbar_logo_url_{self.id}'
+        cached_url = cache.get(cache_key)
+        
+        if cached_url:
+            return cached_url
+        
+        # ImageKit URL-ni al
+        if self.navbar_logo_imagekit_url:
+            url = self.navbar_logo_imagekit_url
+        elif self.navbar_logo:
+            url = self.navbar_logo.url
+        else:
+            url = None
+        
+        # Cache-ə yaz (1 saat)
+        if url:
+            cache.set(cache_key, url, 3600)
+        
+        return url
+    
+    @property
+    def cached_footer_logo_url(self):
+        """Cache edilmiş footer logo URL"""
+        cache_key = f'footer_logo_url_{self.id}'
+        cached_url = cache.get(cache_key)
+        
+        if cached_url:
+            return cached_url
+        
+        # ImageKit URL-ni al
+        if self.footer_logo_imagekit_url:
+            url = self.footer_logo_imagekit_url
+        elif self.footer_logo:
+            url = self.footer_logo.url
+        else:
+            url = None
+        
+        # Cache-ə yaz (1 saat)
+        if url:
+            cache.set(cache_key, url, 3600)
+        
+        return url
 
 
 class Logo(models.Model):
@@ -63,9 +110,59 @@ class Logo(models.Model):
         if not self.pk and Logo.objects.exists():
             return
         super().save(*args, **kwargs)
+        
+        # Cache-i təmizlə
+        cache.delete(f'navbar_logo_url_{self.id}')
+        cache.delete(f'footer_logo_url_{self.id}')
     
     @classmethod
     def get_settings(cls):
         """Tək instance qaytarır"""
         settings, created = cls.objects.get_or_create(id=1)
         return settings
+    
+    @property
+    def cached_navbar_logo_url(self):
+        """Cache edilmiş navbar logo URL"""
+        cache_key = f'logo_navbar_url_{self.id}'
+        cached_url = cache.get(cache_key)
+        
+        if cached_url:
+            return cached_url
+        
+        # ImageKit URL-ni al
+        if self.navbar_logo_imagekit_url:
+            url = self.navbar_logo_imagekit_url
+        elif self.navbar_logo:
+            url = self.navbar_logo.url
+        else:
+            url = None
+        
+        # Cache-ə yaz (1 saat)
+        if url:
+            cache.set(cache_key, url, 3600)
+        
+        return url
+    
+    @property
+    def cached_footer_logo_url(self):
+        """Cache edilmiş footer logo URL"""
+        cache_key = f'logo_footer_url_{self.id}'
+        cached_url = cache.get(cache_key)
+        
+        if cached_url:
+            return cached_url
+        
+        # ImageKit URL-ni al
+        if self.footer_logo_imagekit_url:
+            url = self.footer_logo_imagekit_url
+        elif self.footer_logo:
+            url = self.footer_logo.url
+        else:
+            url = None
+        
+        # Cache-ə yaz (1 saat)
+        if url:
+            cache.set(cache_key, url, 3600)
+        
+        return url

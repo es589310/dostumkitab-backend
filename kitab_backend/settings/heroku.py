@@ -25,6 +25,39 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 # WhiteNoise configuration for Heroku
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
+# Redis Cache Configuration
+REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379')
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': REDIS_URL,
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            'CONNECTION_POOL_KWARGS': {
+                'max_connections': 20,
+                'retry_on_timeout': True,
+            },
+            'SOCKET_CONNECT_TIMEOUT': 5,
+            'SOCKET_TIMEOUT': 5,
+        },
+        'KEY_PREFIX': 'kitab_cache',
+        'TIMEOUT': 300,  # 5 dəqiqə default timeout
+    }
+}
+
+# Cache middleware
+MIDDLEWARE = [
+    'django.middleware.cache.UpdateCacheMiddleware',  # Cache response
+    *MIDDLEWARE,
+    'django.middleware.cache.FetchFromCacheMiddleware',  # Cache request
+]
+
+# Cache settings
+CACHE_MIDDLEWARE_SECONDS = 300  # 5 dəqiqə
+CACHE_MIDDLEWARE_KEY_PREFIX = 'kitab_middleware'
+CACHE_MIDDLEWARE_ALIAS = 'default'
+
 # Email
 EMAIL_HOST = os.environ.get("EMAIL_HOST", "smtp.gmail.com")
 EMAIL_PORT = int(os.environ.get("EMAIL_PORT", 587))
