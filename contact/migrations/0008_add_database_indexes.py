@@ -15,7 +15,7 @@ class Migration(migrations.Migration):
             "DROP INDEX IF EXISTS idx_socialmedia_active_hidden;"
         ),
         migrations.RunSQL(
-            "CREATE INDEX IF NOT EXISTS idx_socialmedia_order_platform ON contact_socialmedialink(order, platform);",
+            "CREATE INDEX IF NOT EXISTS idx_socialmedia_order_platform ON contact_socialmedialink(\"order\", platform);",
             "DROP INDEX IF EXISTS idx_socialmedia_order_platform;"
         ),
         # ContactMessage üçün index
