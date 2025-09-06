@@ -4,8 +4,8 @@ from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
 from rest_framework.decorators import api_view, permission_classes
 from django.shortcuts import get_object_or_404
-from .models import Cart, CartItem
-from .serializers import CartSerializer, CartItemSerializer
+from .models import Cart, CartItem, Order
+from .serializers import CartSerializer, CartItemSerializer, OrderCreateSerializer
 from users.models import AnonymousUser
 from books.models import Book
 import uuid
@@ -167,3 +167,51 @@ def clear_cart(request):
         return Response({'message': 'Səbət təmizləndi!'})
     
     return Response({'message': 'Səbət artıq boşdur!'})
+
+
+class CreateOrderView(generics.CreateAPIView):
+    """Sifariş yaratma"""
+    serializer_class = OrderCreateSerializer
+    permission_classes = [AllowAny]
+    
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['request'] = self.request
+        return context
+    
+    def create(self, request, *args, **kwargs):
+        device_id = request.META.get('HTTP_X_DEVICE_ID', str(uuid.uuid4()))
+        anonymous_user = AnonymousUser.get_or_create_anonymous(device_id)
+        
+        # Səbəti al
+        if request.user.is_authenticated:
+            cart = Cart.objects.filter(user=request.user).first()
+        else:
+            cart = Cart.objects.filter(anonymous_user=anonymous_user).first()
+        
+        if not cart or not cart.items.exists():
+            return Response(
+                {'error': 'Səbət boşdur!'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Sifariş məlumatlarını hazırla
+        order_data = request.data.copy()
+        order_data['delivery_address_id'] = 1  # Default address ID
+        
+        serializer = self.get_serializer(data=order_data)
+        if serializer.is_valid():
+            try:
+                order = serializer.save()
+                return Response({
+                    'message': 'Sifariş uğurla yaradıldı!',
+                    'order_id': order.id,
+                    'order_number': order.order_number
+                }, status=status.HTTP_201_CREATED)
+            except Exception as e:
+                return Response(
+                    {'error': f'Sifariş yaradılarkən xəta: {str(e)}'}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

@@ -77,22 +77,24 @@ class OrderCreateSerializer(serializers.ModelSerializer):
         user = self.context['request'].user
         delivery_address_id = validated_data.pop('delivery_address_id')
         
-        # İstifadəçinin səbətini al
-        cart = Cart.objects.get(user=user)
+        # Səbəti al (authenticated və ya anonymous user)
+        if user.is_authenticated:
+            cart = Cart.objects.get(user=user)
+        else:
+            # Anonymous user üçün device ID-dən cart tap
+            device_id = self.context['request'].META.get('HTTP_X_DEVICE_ID')
+            from users.models import AnonymousUser
+            anonymous_user = AnonymousUser.get_or_create_anonymous(device_id)
+            cart = Cart.objects.get(anonymous_user=anonymous_user)
+        
         if not cart.items.exists():
             raise serializers.ValidationError("Səbət boşdur!")
         
-        # Çatdırılma ünvanını yoxla
-        try:
-            delivery_address = user.addresses.get(id=delivery_address_id, is_active=True)
-        except:
-            raise serializers.ValidationError("Çatdırılma ünvanı tapılmadı!")
-        
-        # Sifarişi yarat
+        # Sifarişi yarat (anonymous user üçün delivery_address None olacaq)
         order = Order.objects.create(
-            user=user,
-            delivery_address=delivery_address,
-            delivery_address_text=delivery_address.full_address,
+            user=user if user.is_authenticated else None,
+            delivery_address=None,  # Anonymous user üçün None
+            delivery_address_text=validated_data.get('delivery_address_text', 'WhatsApp-də təyin ediləcək'),
             subtotal=cart.total_price,
             total_amount=cart.total_price,  # Hələlik çatdırılma pulsuz
             **validated_data

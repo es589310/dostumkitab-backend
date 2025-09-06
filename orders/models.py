@@ -93,7 +93,7 @@ class Order(models.Model):
     
     # Sifariş məlumatları
     order_number = models.CharField(max_length=20, unique=True, verbose_name="Sifariş Nömrəsi")
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='orders', verbose_name="İstifadəçi")
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='orders', null=True, blank=True, verbose_name="İstifadəçi")
     
     # Status
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', verbose_name="Status")
