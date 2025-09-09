@@ -4,13 +4,16 @@ from .models import Category, Author, Publisher, Book, BookReview, Banner
 class CategorySerializer(serializers.ModelSerializer):
     books_count = serializers.SerializerMethodField()
     image = serializers.SerializerMethodField()
+    children = serializers.SerializerMethodField()
+    parent_name = serializers.SerializerMethodField()
     
     class Meta:
         model = Category
-        fields = ['id', 'name', 'description', 'image', 'is_active', 'books_count']
+        fields = ['id', 'name', 'slug', 'description', 'image', 'is_active', 'books_count', 
+                 'parent', 'parent_name', 'level', 'is_leaf', 'order', 'children']
     
     def get_books_count(self, obj):
-        return obj.book_set.count()
+        return obj.get_books_count()
     
     def get_image(self, obj):
         # Əvvəlcə ImageKit URL-ni yoxlayır
@@ -22,6 +25,36 @@ class CategorySerializer(serializers.ModelSerializer):
                 return request.build_absolute_uri(obj.image.url)
             return obj.image.url
         return None
+    
+    def get_children(self, obj):
+        """Alt kateqoriyaları qaytarır"""
+        children = obj.get_children()
+        if children.exists():
+            return CategorySerializer(children, many=True, context=self.context).data
+        return []
+    
+    def get_parent_name(self, obj):
+        """Ana kateqoriyanın adını qaytarır"""
+        return obj.parent.name if obj.parent else None
+
+class CategoryTreeSerializer(serializers.ModelSerializer):
+    """Kateqoriya ağacı üçün serializer"""
+    children = serializers.SerializerMethodField()
+    books_count = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Category
+        fields = ['id', 'name', 'slug', 'level', 'is_leaf', 'books_count', 'children']
+    
+    def get_children(self, obj):
+        """Alt kateqoriyaları qaytarır"""
+        children = obj.get_children()
+        if children.exists():
+            return CategoryTreeSerializer(children, many=True, context=self.context).data
+        return []
+    
+    def get_books_count(self, obj):
+        return obj.get_books_count()
 
 class AuthorSerializer(serializers.ModelSerializer):
     photo = serializers.SerializerMethodField()

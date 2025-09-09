@@ -3,23 +3,72 @@ from django.contrib.auth.models import User
 from django.core.validators import MinValueValidator, MaxValueValidator
 
 class Category(models.Model):
-    """Kitab kateqoriyaları"""
+    """Kitab kateqoriyaları - 3 mərhələli iyerarxik struktur"""
     name = models.CharField(max_length=100, verbose_name="Kateqoriya Adı")
     slug = models.SlugField(unique=True, verbose_name="URL Slug")
     description = models.TextField(blank=True, verbose_name="Təsvir")
     image = models.ImageField(upload_to='categories/', blank=True, null=True, verbose_name="Şəkil")
     imagekit_url = models.URLField(blank=True, null=True, verbose_name="ImageKit URL")
     imagekit_id = models.CharField(max_length=100, blank=True, null=True, verbose_name="ImageKit ID")
+    
+    # İyerarxik struktur
+    parent = models.ForeignKey('self', on_delete=models.CASCADE, blank=True, null=True, verbose_name="Ana Kateqoriya")
+    level = models.PositiveIntegerField(default=1, verbose_name="Mərhələ")
+    is_leaf = models.BooleanField(default=True, verbose_name="Son Kateqoriya")
+    order = models.PositiveIntegerField(default=0, verbose_name="Sıralama")
+    
     is_active = models.BooleanField(default=True, verbose_name="Aktiv")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Yaradılma Tarixi")
     
     class Meta:
         verbose_name = "Kateqoriya"
         verbose_name_plural = "Kateqoriyalar"
-        ordering = ['name']
+        ordering = ['level', 'order', 'name']
     
     def __str__(self):
         return self.name
+    
+    def save(self, *args, **kwargs):
+        """Kateqoriya yaradıldıqda level və is_leaf avtomatik hesablanır"""
+        if self.parent:
+            self.level = self.parent.level + 1
+        else:
+            self.level = 1
+        
+        super().save(*args, **kwargs)
+        
+        # Ana kateqoriyanın is_leaf statusunu yenilə
+        if self.parent:
+            self.parent.is_leaf = False
+            self.parent.save(update_fields=['is_leaf'])
+    
+    def get_children(self):
+        """Alt kateqoriyaları qaytarır"""
+        return Category.objects.filter(parent=self, is_active=True).order_by('order', 'name')
+    
+    def get_all_children(self):
+        """Bütün alt kateqoriyaları (nəticələri) qaytarır"""
+        children = []
+        for child in self.get_children():
+            children.append(child)
+            children.extend(child.get_all_children())
+        return children
+    
+    def get_breadcrumb(self):
+        """Breadcrumb yolu qaytarır"""
+        breadcrumb = []
+        current = self
+        while current:
+            breadcrumb.insert(0, current)
+            current = current.parent
+        return breadcrumb
+    
+    def get_books_count(self):
+        """Bu kateqoriyada və alt kateqoriyalarında olan kitabların sayını qaytarır"""
+        from django.db.models import Q
+        children_ids = [child.id for child in self.get_all_children()]
+        children_ids.append(self.id)
+        return Book.objects.filter(category_id__in=children_ids, is_active=True).count()
 
 class Author(models.Model):
     """Müəlliflər"""
@@ -78,7 +127,7 @@ class Book(models.Model):
     isbn = models.CharField(max_length=13, unique=True, blank=True, null=True, verbose_name="ISBN")
     description = models.TextField(verbose_name="Təsvir")
     language = models.CharField(max_length=10, choices=LANGUAGE_CHOICES, default='az', verbose_name="Dil")
-    pages = models.PositiveIntegerField(verbose_name="Səhifə Sayı")
+    pages = models.PositiveIntegerField(blank=True, null=True, verbose_name="Səhifə Sayı")
     publication_date = models.DateField(blank=True, null=True, verbose_name="Nəşr Tarixi")
     
     # Qiymət və stok

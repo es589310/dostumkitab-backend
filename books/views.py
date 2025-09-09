@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Q
 from .models import Category, Book, BookReview, Banner
-from .serializers import CategorySerializer, BookListSerializer, BookDetailSerializer, BookReviewSerializer, BannerSerializer
+from .serializers import CategorySerializer, CategoryTreeSerializer, BookListSerializer, BookDetailSerializer, BookReviewSerializer, BannerSerializer
 from .filters import BookFilter
 from rest_framework import generics, filters, permissions
 from rest_framework.decorators import api_view
@@ -15,9 +15,52 @@ from users.models import AnonymousUser
 import uuid
 
 class CategoryListView(generics.ListAPIView):
-    """Kateqoriyalar siyahısı"""
-    queryset = Category.objects.filter(is_active=True)
+    """1-ci mərhələ kateqoriyalar siyahısı (ana kateqoriyalar)"""
+    queryset = Category.objects.filter(is_active=True, parent__isnull=True).order_by('order', 'name')
     serializer_class = CategorySerializer
+
+class CategoryChildrenView(generics.ListAPIView):
+    """Alt kateqoriyalar siyahısı"""
+    serializer_class = CategorySerializer
+    
+    def get_queryset(self):
+        parent_id = self.kwargs.get('parent_id')
+        return Category.objects.filter(
+            is_active=True, 
+            parent_id=parent_id
+        ).order_by('order', 'name')
+
+class CategoryTreeView(generics.ListAPIView):
+    """Tam kateqoriya ağacı"""
+    serializer_class = CategoryTreeSerializer
+    
+    def get_queryset(self):
+        return Category.objects.filter(is_active=True, parent__isnull=True).order_by('order', 'name')
+
+class CategoryDetailView(generics.RetrieveAPIView):
+    """Kateqoriya təfərrüatları"""
+    serializer_class = CategorySerializer
+    
+    def get_queryset(self):
+        return Category.objects.filter(is_active=True)
+
+class BooksByCategoryView(generics.ListAPIView):
+    """Kateqoriyaya görə kitablar"""
+    serializer_class = BookListSerializer
+    
+    def get_queryset(self):
+        category_id = self.kwargs.get('category_id')
+        try:
+            category = Category.objects.get(id=category_id, is_active=True)
+            # Bu kateqoriya və bütün alt kateqoriyalarında olan kitabları gətir
+            children_ids = [child.id for child in category.get_all_children()]
+            children_ids.append(category.id)
+            return Book.objects.filter(
+                category_id__in=children_ids,
+                is_active=True
+            ).select_related('category', 'publisher').prefetch_related('authors')
+        except Category.DoesNotExist:
+            return Book.objects.none()
 
 class BookListView(generics.ListAPIView):
     """Kitablar siyahısı"""

@@ -4,6 +4,10 @@ from .views import BookReviewListView
 
 urlpatterns = [
     path('categories/', views.CategoryListView.as_view(), name='category-list'),
+    path('categories/tree/', views.CategoryTreeView.as_view(), name='category-tree'),
+    path('categories/<int:parent_id>/children/', views.CategoryChildrenView.as_view(), name='category-children'),
+    path('categories/<int:pk>/', views.CategoryDetailView.as_view(), name='category-detail'),
+    path('category/<int:category_id>/', views.BooksByCategoryView.as_view(), name='books-by-category'),
     path('', views.BookListView.as_view(), name='book-list'),
     path('featured/', views.FeaturedBooksView.as_view(), name='featured-books'),
     path('bestsellers/', views.BestsellerBooksView.as_view(), name='bestseller-books'),

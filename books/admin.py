@@ -4,18 +4,22 @@ from .models import Category, Author, Publisher, Book, BookReview, Banner
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
-    list_display = ['name', 'slug', 'image_display', 'is_active', 'created_at']
-    list_filter = ['is_active', 'created_at']
+    list_display = ['name', 'parent', 'level', 'order', 'is_leaf', 'image_display', 'is_active', 'created_at']
+    list_filter = ['level', 'is_leaf', 'is_active', 'parent', 'created_at']
     search_fields = ['name', 'description']
     prepopulated_fields = {'slug': ('name',)}
-    list_editable = ['is_active']
+    list_editable = ['is_active', 'order']
     list_per_page = 20
-    ordering = ['name']
+    ordering = ['level', 'order', 'name']
     
     fieldsets = (
         ('Əsas Məlumatlar', {
             'fields': ('name', 'slug', 'description'),
             'description': 'Kateqoriya üçün əsas məlumatları daxil edin'
+        }),
+        ('İyerarxik Struktur', {
+            'fields': ('parent', 'level', 'order', 'is_leaf'),
+            'description': 'Kateqoriya iyerarxik strukturunu təyin edin. Level və is_leaf avtomatik hesablanır.'
         }),
         ('Şəkil', {
             'fields': ('image', 'imagekit_url'),
@@ -162,7 +166,7 @@ class BookAdmin(admin.ModelAdmin):
         }),
         ('Kitab Detalları', {
             'fields': ('isbn', 'description', 'language', 'pages', 'publication_date'),
-            'description': 'Kitabın texniki məlumatlarını daxil edin'
+            'description': 'Kitabın texniki məlumatlarını daxil edin. Səhifə sayı məcburi deyil (digər məhsullar üçün)'
         }),
         ('Qiymət və Stok', {
             'fields': ('price', 'original_price', 'stock_quantity'),
