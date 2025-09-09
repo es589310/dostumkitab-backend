@@ -234,3 +234,5 @@ $RECYCLE.BIN/
 
 venv/
 # 🔒 CRITICAL SECURITY - Miscellaneous
+
+node_modules/
