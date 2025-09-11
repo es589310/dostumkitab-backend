@@ -109,6 +109,7 @@ class Book(models.Model):
     """Kitablar"""
     LANGUAGE_CHOICES = [
         ('az', 'Azərbaycan'),
+        ('az_ru', 'Azərbaycan və Rus'),
         ('tr', 'Türk'),
         ('en', 'İngilis'),
         ('ru', 'Rus'),
