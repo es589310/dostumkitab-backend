@@ -26,7 +26,7 @@ export function AuthModal({ isOpen, onClose, mode, onModeChange }: AuthModalProp
   const [isLoading, setIsLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
-  const { login } = useAuth()
+  const { login, register } = useAuth()
 
   if (!isOpen) return null
 
@@ -40,8 +40,16 @@ export function AuthModal({ isOpen, onClose, mode, onModeChange }: AuthModalProp
           alert("Şifrələr uyğun gəlmir!")
           return
         }
-        // Register logic will be implemented with Django backend
-        console.log("Register:", formData)
+        // Email-dən username yaratmaq
+        const username = formData.email.split('@')[0].replace(/[^a-zA-Z0-9]/g, '') + Math.floor(Math.random() * 1000)
+        
+        await register({
+          username: username, 
+          email: formData.email,
+          first_name: formData.name.split(" ")[0] || "",
+          last_name: formData.name.split(" ").slice(1).join(" ") || "",
+          password: formData.password,
+        })
       } else {
         // Login logic will be implemented with Django backend
         login({

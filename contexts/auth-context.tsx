@@ -11,6 +11,7 @@ interface User {
 interface AuthContextType {
   user: User | null
   login: (user: User) => void
+  register: (userData: { username: string; email: string; password: string; first_name?: string; last_name?: string }) => Promise<void>
   logout: () => void
   isAuthenticated: boolean
 }
@@ -26,6 +27,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem("user", JSON.stringify(userData))
   }
 
+  const register = async (userData: { username: string; email: string; password: string; first_name?: string; last_name?: string }) => {
+    try {
+      const response = await fetch('/api/auth/register/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(userData),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.detail || 'Qeydiyyat zamanı xəta baş verdi')
+      }
+
+      const data = await response.json()
+      // Register uğurlu olduqdan sonra avtomatik login et
+      login({
+        id: data.user.id,
+        name: `${data.user.first_name} ${data.user.last_name}`.trim() || data.user.username,
+        email: data.user.email,
+      })
+    } catch (error) {
+      console.error('Register error:', error)
+      throw error
+    }
+  }
+
   const logout = () => {
     setUser(null)
     localStorage.removeItem("user")
@@ -38,6 +67,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       value={{
         user,
         login,
+        register,
         logout,
         isAuthenticated,
       }}
