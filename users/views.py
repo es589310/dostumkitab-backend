@@ -52,15 +52,24 @@ class RegisterView(generics.CreateAPIView):
 @permission_classes([permissions.AllowAny])
 def login_view(request):
     """İstifadəçi girişi"""
-    username = request.data.get('username')
+    username_or_email = request.data.get('username')
     password = request.data.get('password')
     
-    if not username or not password:
+    if not username_or_email or not password:
         return Response({
             'error': 'İstifadəçi adı və şifrə tələb olunur!'
         }, status=status.HTTP_400_BAD_REQUEST)
     
-    user = authenticate(username=username, password=password)
+    # Əvvəlcə username ilə yoxla
+    user = authenticate(username=username_or_email, password=password)
+    
+    # Əgər username ilə tapılmadısa, email ilə yoxla
+    if not user and '@' in username_or_email:
+        try:
+            user_obj = User.objects.get(email=username_or_email)
+            user = authenticate(username=user_obj.username, password=password)
+        except User.DoesNotExist:
+            user = None
     
     if user:
         refresh = RefreshToken.for_user(user)
