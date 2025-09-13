@@ -157,10 +157,14 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:3001",
     "http://127.0.0.1:3001",
     "https://dostumkitab.az",
+    "https://www.dostumkitab.az",
     "https://dostumkitabapp-frontend-eu-36f5e7d23d85.herokuapp.com",
 ]
 
 CORS_ALLOW_CREDENTIALS = True
+
+# Allow all origins for development (be careful in production)
+CORS_ALLOW_ALL_ORIGINS = True
 
 # Additional CORS headers
 CORS_ALLOW_HEADERS = [
@@ -175,6 +179,9 @@ CORS_ALLOW_HEADERS = [
     'x-requested-with',
     'x-device-id',  # Custom header for device identification
 ]
+
+# CORS preflight options
+CORS_PREFLIGHT_MAX_AGE = 86400
 
 # Admin panel customization
 ADMIN_SITE_HEADER = "📚 Kitab Satış Sistemi"

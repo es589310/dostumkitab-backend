@@ -39,6 +39,27 @@ ALLOWED_HOSTS = [host.strip() for host in ALLOWED_HOSTS_STR.split(',')]
 CORS_ALLOWED_ORIGINS_STR = config('CORS_ALLOWED_ORIGINS', default='https://dostumkitab.az,https://www.dostumkitab.az')
 CORS_ALLOWED_ORIGINS = [origin.strip() for origin in CORS_ALLOWED_ORIGINS_STR.split(',')]
 
+# Additional CORS settings for production
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_ALL_ORIGINS = False
+
+# CORS headers
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+    'x-device-id',
+]
+
+# CORS preflight options
+CORS_PREFLIGHT_MAX_AGE = 86400
+
 # Database Configuration - Production Ready
 DATABASES = {
     'default': {
