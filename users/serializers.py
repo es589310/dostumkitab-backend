@@ -21,12 +21,20 @@ class UserSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'date_joined']
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
+    username = serializers.CharField(max_length=20, min_length=3)
     password = serializers.CharField(write_only=True, validators=[validate_password])
     password_confirm = serializers.CharField(write_only=True)
     
     class Meta:
         model = User
         fields = ['username', 'email', 'first_name', 'last_name', 'password', 'password_confirm']
+    
+    def validate_username(self, value):
+        if len(value) < 3:
+            raise serializers.ValidationError("İstifadəçi adı ən azı 3 simvol olmalıdır!")
+        if len(value) > 20:
+            raise serializers.ValidationError("İstifadəçi adı ən çox 20 simvol ola bilər!")
+        return value
     
     def validate(self, attrs):
         if attrs['password'] != attrs['password_confirm']:

@@ -9,14 +9,10 @@ class SiteSettingsAdmin(admin.ModelAdmin):
             'fields': ('site_name', 'site_description')
         }),
         ('Əlaqə Məlumatları', {
-            'fields': ('phone', 'email', 'address', 'working_hours', 'whatsapp_number')
+            'fields': ('phone', 'email', 'address', 'coordinates', 'working_hours', 'whatsapp_number')
         }),
         ('Copyright', {
             'fields': ('copyright_year',)
-        }),
-        ('Sosial Media', {
-            'fields': ('facebook', 'instagram', 'twitter', 'youtube'),
-            'classes': ('collapse',)
         }),
     )
     

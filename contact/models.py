@@ -75,6 +75,7 @@ class SocialMediaLink(models.Model):
         ('youtube', 'YouTube'),
         ('linkedin', 'LinkedIn'),
         ('telegram', 'Telegram'),
+        ('tiktok', 'TikTok'),
     )
     
     platform = models.CharField(max_length=20, choices=PLATFORM_CHOICES, verbose_name="Platforma")
@@ -107,5 +108,6 @@ class SocialMediaLink(models.Model):
             'youtube': 'fab fa-youtube',
             'linkedin': 'fab fa-linkedin-in',
             'telegram': 'fab fa-telegram-plane',
+            'tiktok': 'fab fa-tiktok',
         }
         return icon_map.get(self.platform, 'fas fa-link')
