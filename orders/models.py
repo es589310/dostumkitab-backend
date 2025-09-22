@@ -63,9 +63,7 @@ class CartItem(models.Model):
     @property
     def total_price(self):
         """Bu elementin ümumi qiyməti"""
-        if self.book.price is not None and self.quantity is not None:
-            return self.book.price * self.quantity
-        return 0
+        return self.book.price * self.quantity
 
 class Order(models.Model):
     """Sifarişlər"""
@@ -95,7 +93,7 @@ class Order(models.Model):
     
     # Sifariş məlumatları
     order_number = models.CharField(max_length=20, unique=True, verbose_name="Sifariş Nömrəsi")
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='orders', verbose_name="İstifadəçi", null=True, blank=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='orders', null=True, blank=True, verbose_name="İstifadəçi")
     
     # Status
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', verbose_name="Status")
@@ -111,7 +109,7 @@ class Order(models.Model):
     # Çatdırılma məlumatları
     delivery_address = models.ForeignKey(Address, on_delete=models.SET_NULL, null=True, verbose_name="Çatdırılma Ünvanı")
     delivery_name = models.CharField(max_length=200, verbose_name="Alıcı Adı")
-    delivery_phone = models.CharField(max_length=50, verbose_name="Alıcı Telefonu")
+    delivery_phone = models.CharField(max_length=20, verbose_name="Alıcı Telefonu")
     delivery_address_text = models.TextField(verbose_name="Çatdırılma Ünvanı (Mətn)")
     
     # Qeydlər
@@ -130,10 +128,7 @@ class Order(models.Model):
         ordering = ['-created_at']
     
     def __str__(self):
-        if self.user:
-            return f"Sifariş #{self.order_number} - {self.user.username}"
-        else:
-            return f"Sifariş #{self.order_number} - Anonim İstifadəçi"
+        return f"Sifariş #{self.order_number} - {self.user.username}"
     
     def save(self, *args, **kwargs):
         if not self.order_number:
@@ -159,9 +154,7 @@ class OrderItem(models.Model):
     @property
     def total_price(self):
         """Bu elementin ümumi qiyməti"""
-        if self.price is not None and self.quantity is not None:
-            return self.price * self.quantity
-        return 0
+        return self.price * self.quantity
 
 class OrderStatusHistory(models.Model):
     """Sifariş status tarixçəsi"""

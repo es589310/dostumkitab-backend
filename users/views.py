@@ -2,11 +2,19 @@ from rest_framework import generics, status, permissions
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.exceptions import TokenError
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
 from .models import Address
 from .serializers import UserSerializer, UserRegistrationSerializer, AddressSerializer
-from lib.email_utils import send_welcome_email
+
+# Email utils import-unu try-except ilə əhatə et
+try:
+    from lib.email_utils import send_welcome_email
+    EMAIL_UTILS_AVAILABLE = True
+except ImportError:
+    EMAIL_UTILS_AVAILABLE = False
+    print("Warning: lib.email_utils not available, email features disabled")
 
 class RegisterView(generics.CreateAPIView):
     """İstifadəçi qeydiyyatı"""
@@ -20,11 +28,14 @@ class RegisterView(generics.CreateAPIView):
         user = serializer.save()
         
         # Xoş gəlmə emaili göndəririk
-        try:
-            send_welcome_email(user)
-        except Exception as e:
-            print(f"⚠️ Email göndərilmədi: {str(e)}")
-            # Email göndərilməsə də qeydiyyat uğurlu olur
+        if EMAIL_UTILS_AVAILABLE:
+            try:
+                send_welcome_email(user)
+            except Exception as e:
+                print(f"⚠️ Email göndərilmədi: {str(e)}")
+                # Email göndərilməsə də qeydiyyat uğurlu olur
+        else:
+            print("Email utils not available, skipping welcome email")
         
         # JWT token yaradırıq
         refresh = RefreshToken.for_user(user)
@@ -42,15 +53,24 @@ class RegisterView(generics.CreateAPIView):
 @permission_classes([permissions.AllowAny])
 def login_view(request):
     """İstifadəçi girişi"""
-    username = request.data.get('username')
+    username_or_email = request.data.get('username')
     password = request.data.get('password')
     
-    if not username or not password:
+    if not username_or_email or not password:
         return Response({
             'error': 'İstifadəçi adı və şifrə tələb olunur!'
         }, status=status.HTTP_400_BAD_REQUEST)
     
-    user = authenticate(username=username, password=password)
+    # Əvvəlcə username ilə yoxla
+    user = authenticate(username=username_or_email, password=password)
+    
+    # Əgər username ilə tapılmadısa, email ilə yoxla
+    if not user and '@' in username_or_email:
+        try:
+            user_obj = User.objects.get(email=username_or_email)
+            user = authenticate(username=user_obj.username, password=password)
+        except User.DoesNotExist:
+            user = None
     
     if user:
         refresh = RefreshToken.for_user(user)
@@ -94,3 +114,27 @@ class AddressDetailView(generics.RetrieveUpdateDestroyAPIView):
         # Ünvanı silmək əvəzinə deaktiv edirik
         instance.is_active = False
         instance.save()
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def logout_view(request):
+    """İstifadəçi çıxışı"""
+    try:
+        # Refresh token-i al və blacklist-ə əlavə et
+        refresh_token = request.data.get('refresh')
+        if refresh_token:
+            token = RefreshToken(refresh_token)
+            token.blacklist()
+        
+        return Response({
+            'message': 'Uğurla çıxış etdiniz!'
+        }, status=status.HTTP_200_OK)
+        
+    except TokenError:
+        return Response({
+            'error': 'Token etibarsızdır!'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        return Response({
+            'error': 'Çıxış zamanı xəta baş verdi!'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

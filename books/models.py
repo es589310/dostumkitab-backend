@@ -1,25 +1,82 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.core.validators import MinValueValidator, MaxValueValidator
+from django.contrib.postgres.search import SearchVectorField
+from django.contrib.postgres.indexes import GinIndex
 
 class Category(models.Model):
-    """Kitab kateqoriyaları"""
+    """Kitab kateqoriyaları - 3 mərhələli iyerarxik struktur"""
     name = models.CharField(max_length=100, verbose_name="Kateqoriya Adı")
     slug = models.SlugField(unique=True, verbose_name="URL Slug")
     description = models.TextField(blank=True, verbose_name="Təsvir")
     image = models.ImageField(upload_to='categories/', blank=True, null=True, verbose_name="Şəkil")
     imagekit_url = models.URLField(blank=True, null=True, verbose_name="ImageKit URL")
     imagekit_id = models.CharField(max_length=100, blank=True, null=True, verbose_name="ImageKit ID")
+    
+    # İyerarxik struktur
+    parent = models.ForeignKey('self', on_delete=models.CASCADE, blank=True, null=True, verbose_name="Ana Kateqoriya")
+    level = models.PositiveIntegerField(default=1, verbose_name="Mərhələ")
+    is_leaf = models.BooleanField(default=True, verbose_name="Son Kateqoriya")
+    order = models.PositiveIntegerField(default=0, verbose_name="Sıralama")
+    
     is_active = models.BooleanField(default=True, verbose_name="Aktiv")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Yaradılma Tarixi")
+    
+    # Full-text search field
+    search_vector = SearchVectorField(null=True, blank=True, verbose_name="Axtarış Vektoru")
     
     class Meta:
         verbose_name = "Kateqoriya"
         verbose_name_plural = "Kateqoriyalar"
-        ordering = ['name']
+        ordering = ['level', 'order', 'name']
+        indexes = [
+            GinIndex(fields=["search_vector"]),
+        ]
     
     def __str__(self):
         return self.name
+    
+    def save(self, *args, **kwargs):
+        """Kateqoriya yaradıldıqda level və is_leaf avtomatik hesablanır"""
+        if self.parent:
+            self.level = self.parent.level + 1
+        else:
+            self.level = 1
+        
+        super().save(*args, **kwargs)
+        
+        # Ana kateqoriyanın is_leaf statusunu yenilə
+        if self.parent:
+            self.parent.is_leaf = False
+            self.parent.save(update_fields=['is_leaf'])
+    
+    def get_children(self):
+        """Alt kateqoriyaları qaytarır"""
+        return Category.objects.filter(parent=self, is_active=True).order_by('order', 'name')
+    
+    def get_all_children(self):
+        """Bütün alt kateqoriyaları (nəticələri) qaytarır"""
+        children = []
+        for child in self.get_children():
+            children.append(child)
+            children.extend(child.get_all_children())
+        return children
+    
+    def get_breadcrumb(self):
+        """Breadcrumb yolu qaytarır"""
+        breadcrumb = []
+        current = self
+        while current:
+            breadcrumb.insert(0, current)
+            current = current.parent
+        return breadcrumb
+    
+    def get_books_count(self):
+        """Bu kateqoriyada və alt kateqoriyalarında olan kitabların sayını qaytarır"""
+        from django.db.models import Q
+        children_ids = [child.id for child in self.get_all_children()]
+        children_ids.append(self.id)
+        return Book.objects.filter(category_id__in=children_ids, is_active=True).count()
 
 class Author(models.Model):
     """Müəlliflər"""
@@ -32,10 +89,16 @@ class Author(models.Model):
     photo_imagekit_id = models.CharField(max_length=100, blank=True, null=True, verbose_name="Foto ImageKit ID")
     nationality = models.CharField(max_length=100, blank=True, verbose_name="Milliyyət")
     
+    # Full-text search field
+    search_vector = SearchVectorField(null=True, blank=True, verbose_name="Axtarış Vektoru")
+    
     class Meta:
         verbose_name = "Müəllif"
         verbose_name_plural = "Müəlliflər"
         ordering = ['name']
+        indexes = [
+            GinIndex(fields=["search_vector"]),
+        ]
     
     def __str__(self):
         return self.name
@@ -48,10 +111,16 @@ class Publisher(models.Model):
     email = models.EmailField(blank=True, verbose_name="E-mail")
     website = models.URLField(blank=True, verbose_name="Veb sayt")
     
+    # Full-text search field
+    search_vector = SearchVectorField(null=True, blank=True, verbose_name="Axtarış Vektoru")
+    
     class Meta:
         verbose_name = "Nəşriyyat"
         verbose_name_plural = "Nəşriyyatlar"
         ordering = ['name']
+        indexes = [
+            GinIndex(fields=["search_vector"]),
+        ]
     
     def __str__(self):
         return self.name
@@ -60,6 +129,7 @@ class Book(models.Model):
     """Kitablar"""
     LANGUAGE_CHOICES = [
         ('az', 'Azərbaycan'),
+        ('az_ru', 'Azərbaycan və Rus'),
         ('tr', 'Türk'),
         ('en', 'İngilis'),
         ('ru', 'Rus'),
@@ -78,7 +148,7 @@ class Book(models.Model):
     isbn = models.CharField(max_length=13, unique=True, blank=True, null=True, verbose_name="ISBN")
     description = models.TextField(verbose_name="Təsvir")
     language = models.CharField(max_length=10, choices=LANGUAGE_CHOICES, default='az', verbose_name="Dil")
-    pages = models.PositiveIntegerField(verbose_name="Səhifə Sayı")
+    pages = models.PositiveIntegerField(blank=True, null=True, verbose_name="Səhifə Sayı")
     publication_date = models.DateField(blank=True, null=True, verbose_name="Nəşr Tarixi")
     
     # Qiymət və stok
@@ -108,10 +178,17 @@ class Book(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Əlavə Edilmə Tarixi")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Yenilənmə Tarixi")
     
+    # Full-text search fields
+    search_text = models.TextField(blank=True, verbose_name="Axtarış Mətni")
+    search_vector = SearchVectorField(null=True, blank=True, verbose_name="Axtarış Vektoru")
+    
     class Meta:
         verbose_name = "Kitab"
         verbose_name_plural = "Kitablar"
         ordering = ['-created_at']
+        indexes = [
+            GinIndex(fields=["search_vector"]),
+        ]
     
     def __str__(self):
         return self.title
@@ -133,14 +210,14 @@ class Book(models.Model):
         return None
     
     def get_optimized_cover_url(self, width=None, height=None, quality=80):
-        """Optimizasiya edilmiş üz qabığı URL-ni qaytarır - Production Error Handling ilə"""
+        """Optimizasiya edilmiş üz qabığı URL-ni qaytarır"""
         if self.cover_imagekit_url:
             try:
                 from lib.imagekit_utils import imagekit_manager
                 filename = self.cover_imagekit_url.split('/')[-1]
                 return imagekit_manager.optimize_image_url(filename, width, height, quality)
             except ImportError:
-                # ImageKit not available - fallback
+                print("Warning: lib.imagekit_utils not available, returning original URL")
                 return self.get_cover_image_url()
         return self.get_cover_image_url()
     
@@ -153,9 +230,11 @@ class Book(models.Model):
     
     @property
     def average_rating(self):
-        """Orta reytinqi hesabla - Production Performance ilə"""
-        from django.db.models import Avg
-        return self.reviews.aggregate(Avg('rating'))['rating__avg'] or 0
+        """Orta reytinqi hesabla"""
+        reviews = self.reviews.all()
+        if reviews:
+            return sum([review.rating for review in reviews]) / len(reviews)
+        return 0
     
     @property
     def reviews_count(self):
@@ -191,8 +270,8 @@ class BookReview(models.Model):
 from django.db import models
 
 class Banner(models.Model):
-    title = models.CharField(max_length=200, verbose_name="Başlıq")
-    subtitle = models.CharField(max_length=300, blank=True, verbose_name="Alt başlıq")
+    title = models.CharField(max_length=200, blank=True, null=True, verbose_name="Başlıq")
+    subtitle = models.CharField(max_length=300, blank=True, null=True, verbose_name="Alt başlıq")
     image = models.ImageField(upload_to='banners/', blank=True, null=True, verbose_name="Şəkil")
     imagekit_url = models.URLField(blank=True, null=True, verbose_name="ImageKit URL")
     imagekit_id = models.CharField(max_length=100, blank=True, null=True, verbose_name="ImageKit ID")
@@ -205,6 +284,6 @@ class Banner(models.Model):
         verbose_name_plural = "Reklam Panoları"
 
     def __str__(self):
-        return self.title
+        return self.title or f"Banner {self.id}"
 
 

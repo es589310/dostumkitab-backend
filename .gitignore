@@ -16,6 +16,11 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
+# env files
+.env*
+.env
+*.env
+
 # vercel
 .vercel
 
@@ -34,7 +39,6 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
 lib64/
 parts/
 sdist/
@@ -89,150 +93,9 @@ debug.log
 *.log
 logs/
 
-# 🔒 CRITICAL SECURITY - Environment Variables
-.env
-.env.local
-.env.development
-.env.production
-.env.staging
-.env.test
-.env.*.local
-.env.backup
-.env.old
-
-.env.*
-.env
-
-# 🔒 CRITICAL SECURITY - Production Credentials
-credentials.json
-service-account.json
-*.pem
-*.key
-*.crt
-*.p12
-*.pfx
-
-# 🔒 CRITICAL SECURITY - Database Files
-*.sql
-*.sqlite
-*.db
-*.sqlite3
-*.sqlite3-journal
-*.sqlite3-wal
-*.sqlite3-shm
-
-# 🔒 CRITICAL SECURITY - Cache & Temporary Files
-.cache/
-tmp/
-temp/
-*.tmp
-*.temp
-*.cache
-
-# 🔒 CRITICAL SECURITY - Log Files
-*.log
-logs/
-log/
-debug.log
-error.log
-access.log
-nginx.log
-gunicorn.log
-
-# 🔒 CRITICAL SECURITY - Backup Files
-*.backup
-*.bak
-*.old
-*.orig
-*.save
-
-# 🔒 CRITICAL SECURITY - Configuration Files
-config.local.py
-settings.local.py
-local_config.py
-production.py
-staging.py
-
-# 🔒 CRITICAL SECURITY - SSL Certificates
-ssl/
-certificates/
-*.crt
-*.key
-*.pem
-*.p12
-*.pfx
-
-# 🔒 CRITICAL SECURITY - SSH Keys
-.ssh/
-id_rsa
-id_rsa.pub
-id_ed25519
-id_ed25519.pub
-
-# 🔒 CRITICAL SECURITY - Docker Secrets
-.docker/
-docker-compose.override.yml
-docker-compose.local.yml
-
-# 🔒 CRITICAL SECURITY - Heroku
-.heroku/
-Procfile.local
-
-# 🔒 CRITICAL SECURITY - AWS
-.aws/
-aws-credentials
-*.pem
-
-# 🔒 CRITICAL SECURITY - Google Cloud
-.gcloud/
-service-account-*.json
-
-# 🔒 CRITICAL SECURITY - Azure
-.azure/
-azure-credentials
-
-# 🔒 CRITICAL SECURITY - Monitoring & Analytics
-sentry/
-newrelic/
-datadog/
-*.yml
-*.yaml
-
-# 🔒 CRITICAL SECURITY - Build Artifacts
-dist/
-build/
-*.tar.gz
-*.zip
-*.rar
-
-# 🔒 CRITICAL SECURITY - Test Coverage
-.coverage
-htmlcov/
-.pytest_cache/
-.tox/
-
-# 🔒 CRITICAL SECURITY - IDE Settings
-.vscode/settings.json
-.idea/workspace.xml
-*.sublime-project
-*.sublime-workspace
-
-# 🔒 CRITICAL SECURITY - OS Generated Files
-Thumbs.db
-ehthumbs.db
-Desktop.ini
-$RECYCLE.BIN/
-*.lnk
-
-# 🔒 CRITICAL SECURITY - Temporary Files
-*.swp
-*.swo
-*~
-*.tmp
-*.temp
-*.cache
-
-venv/
-# 🔒 CRITICAL SECURITY - Miscellaneous
-
-node_modules/
+# Environment variables
+# .env
+# .env.local
+# .env.development.local
+# .env.test.local
+# .env.production.local

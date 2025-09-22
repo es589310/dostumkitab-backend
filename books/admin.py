@@ -4,18 +4,22 @@ from .models import Category, Author, Publisher, Book, BookReview, Banner
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
-    list_display = ['name', 'slug', 'image_display', 'is_active', 'created_at']
-    list_filter = ['is_active', 'created_at']
+    list_display = ['name', 'parent', 'level', 'order', 'is_leaf', 'image_display', 'is_active', 'created_at']
+    list_filter = ['level', 'is_leaf', 'is_active', 'parent', 'created_at']
     search_fields = ['name', 'description']
     prepopulated_fields = {'slug': ('name',)}
-    list_editable = ['is_active']
+    list_editable = ['is_active', 'order']
     list_per_page = 20
-    ordering = ['name']
+    ordering = ['level', 'order', 'name']
     
     fieldsets = (
         ('Əsas Məlumatlar', {
             'fields': ('name', 'slug', 'description'),
             'description': 'Kateqoriya üçün əsas məlumatları daxil edin'
+        }),
+        ('İyerarxik Struktur', {
+            'fields': ('parent', 'level', 'order', 'is_leaf'),
+            'description': 'Kateqoriya iyerarxik strukturunu təyin edin. Level və is_leaf avtomatik hesablanır.'
         }),
         ('Şəkil', {
             'fields': ('image', 'imagekit_url'),
@@ -37,29 +41,26 @@ class CategoryAdmin(admin.ModelAdmin):
     image_display.short_description = "Şəkil"
     
     def save_model(self, request, obj, form, change):
-        """Şəkli ImageKit-ə yükləyir - Production Error Handling ilə"""
+        """Şəkli ImageKit-ə yükləyir"""
         super().save_model(request, obj, form, change)
         
         if 'image' in form.changed_data and obj.image:
             try:
                 from lib.imagekit_utils import imagekit_manager
-                result = imagekit_manager.upload_image(
-                    obj.image, 
-                    folder_path='categories',
-                    filename=f"category_{obj.slug}_{obj.id}"
-                )
-                if result['success']:
-                    obj.imagekit_url = result['url']
-                    obj.imagekit_id = result['file_id']
-                    obj.save(update_fields=['imagekit_url', 'imagekit_id'])
+                IMAGEKIT_AVAILABLE = True
             except ImportError:
-                # ImageKit not available - skip upload
-                pass
-            except Exception as e:
-                # Log error but don't break admin
-                import logging
-                logger = logging.getLogger(__name__)
-                logger.error(f"ImageKit upload error for category {obj.id}: {str(e)}")
+                IMAGEKIT_AVAILABLE = False
+                print("Warning: lib.imagekit_utils not available, skipping image upload")
+                return
+            result = imagekit_manager.upload_image(
+                obj.image, 
+                folder_path='categories',
+                filename=f"category_{obj.slug}_{obj.id}"
+            )
+            if result['success']:
+                obj.imagekit_url = result['url']
+                obj.imagekit_id = result['file_id']
+                obj.save(update_fields=['imagekit_url', 'imagekit_id'])
 
 @admin.register(Author)
 class AuthorAdmin(admin.ModelAdmin):
@@ -95,29 +96,26 @@ class AuthorAdmin(admin.ModelAdmin):
     photo_display.short_description = "Foto"
     
     def save_model(self, request, obj, form, change):
-        """Şəkli ImageKit-ə yükləyir - Production Error Handling ilə"""
+        """Şəkli ImageKit-ə yükləyir"""
         super().save_model(request, obj, form, change)
         
         if 'photo' in form.changed_data and obj.photo:
             try:
                 from lib.imagekit_utils import imagekit_manager
-                result = imagekit_manager.upload_image(
-                    obj.photo, 
-                    folder_path='authors',
-                    filename=f"author_{obj.id}_{obj.name.replace(' ', '_')}"
-                )
-                if result['success']:
-                    obj.photo_imagekit_url = result['url']
-                    obj.photo_imagekit_id = result['file_id']
-                    obj.save(update_fields=['photo_imagekit_url', 'photo_imagekit_id'])
+                IMAGEKIT_AVAILABLE = True
             except ImportError:
-                # ImageKit not available - skip upload
-                pass
-            except Exception as e:
-                # Log error but don't break admin
-                import logging
-                logger = logging.getLogger(__name__)
-                logger.error(f"ImageKit upload error for author {obj.id}: {str(e)}")
+                IMAGEKIT_AVAILABLE = False
+                print("Warning: lib.imagekit_utils not available, skipping image upload")
+                return
+            result = imagekit_manager.upload_image(
+                obj.photo, 
+                folder_path='authors',
+                filename=f"author_{obj.id}_{obj.name.replace(' ', '_')}"
+            )
+            if result['success']:
+                obj.photo_imagekit_url = result['url']
+                obj.photo_imagekit_id = result['file_id']
+                obj.save(update_fields=['photo_imagekit_url', 'photo_imagekit_id'])
 
 @admin.register(Publisher)
 class PublisherAdmin(admin.ModelAdmin):
@@ -168,7 +166,7 @@ class BookAdmin(admin.ModelAdmin):
         }),
         ('Kitab Detalları', {
             'fields': ('isbn', 'description', 'language', 'pages', 'publication_date'),
-            'description': 'Kitabın texniki məlumatlarını daxil edin'
+            'description': 'Kitabın texniki məlumatlarını daxil edin. Səhifə sayı məcburi deyil (digər məhsullar üçün)'
         }),
         ('Qiymət və Stok', {
             'fields': ('price', 'original_price', 'stock_quantity'),
@@ -204,52 +202,46 @@ class BookAdmin(admin.ModelAdmin):
     cover_image_display.short_description = "Üz Qabığı"
     
     def save_model(self, request, obj, form, change):
-        """Şəkilləri ImageKit-ə yükləyir - Production Error Handling ilə"""
+        """Şəkilləri ImageKit-ə yükləyir"""
         super().save_model(request, obj, form, change)
         
         # Cover image yüklənməsi
         if 'cover_image' in form.changed_data and obj.cover_image:
             try:
                 from lib.imagekit_utils import imagekit_manager
-                result = imagekit_manager.upload_image(
-                    obj.cover_image, 
-                    folder_path='books/covers',
-                    filename=f"cover_{obj.slug}_{obj.id}"
-                )
-                if result['success']:
-                    obj.cover_imagekit_url = result['url']
-                    obj.cover_imagekit_id = result['file_id']
-                    obj.save(update_fields=['cover_imagekit_url', 'cover_imagekit_id'])
+                IMAGEKIT_AVAILABLE = True
             except ImportError:
-                # ImageKit not available - skip upload
-                pass
-            except Exception as e:
-                # Log error but don't break admin
-                import logging
-                logger = logging.getLogger(__name__)
-                logger.error(f"ImageKit upload error for book cover {obj.id}: {str(e)}")
+                IMAGEKIT_AVAILABLE = False
+                print("Warning: lib.imagekit_utils not available, skipping image upload")
+                return
+            result = imagekit_manager.upload_image(
+                obj.cover_image, 
+                folder_path='books/covers',
+                filename=f"cover_{obj.slug}_{obj.id}"
+            )
+            if result['success']:
+                obj.cover_imagekit_url = result['url']
+                obj.cover_imagekit_id = result['file_id']
+                obj.save(update_fields=['cover_imagekit_url', 'cover_imagekit_id'])
         
         # Back image yüklənməsi
         if 'back_image' in form.changed_data and obj.back_image:
             try:
                 from lib.imagekit_utils import imagekit_manager
-                result = imagekit_manager.upload_image(
-                    obj.back_image, 
-                    folder_path='books/backs',
-                    filename=f"back_{obj.slug}_{obj.id}"
-                )
-                if result['success']:
-                    obj.back_imagekit_url = result['url']
-                    obj.back_imagekit_id = result['file_id']
-                    obj.save(update_fields=['back_imagekit_url', 'back_imagekit_id'])
+                IMAGEKIT_AVAILABLE = True
             except ImportError:
-                # ImageKit not available - skip upload
-                pass
-            except Exception as e:
-                # Log error but don't break admin
-                import logging
-                logger = logging.getLogger(__name__)
-                logger.error(f"ImageKit upload error for book back {obj.id}: {str(e)}")
+                IMAGEKIT_AVAILABLE = False
+                print("Warning: lib.imagekit_utils not available, skipping image upload")
+                return
+            result = imagekit_manager.upload_image(
+                obj.back_image, 
+                folder_path='books/backs',
+                filename=f"back_{obj.slug}_{obj.id}"
+            )
+            if result['success']:
+                obj.back_imagekit_url = result['url']
+                obj.back_imagekit_id = result['file_id']
+                obj.save(update_fields=['back_imagekit_url', 'back_imagekit_id'])
 
 @admin.register(BookReview)
 class BookReviewAdmin(admin.ModelAdmin):
@@ -319,27 +311,26 @@ class BannerAdmin(admin.ModelAdmin):
     image_display.short_description = "Şəkil"
     
     def save_model(self, request, obj, form, change):
-        """Şəkli ImageKit-ə yükləyir - Production Error Handling ilə"""
+        """Şəkli ImageKit-ə yükləyir"""
         super().save_model(request, obj, form, change)
         
         if 'image' in form.changed_data and obj.image:
             try:
                 from lib.imagekit_utils import imagekit_manager
-                result = imagekit_manager.upload_image(
-                    obj.image, 
-                    folder_path='banners',
-                    filename=f"banner_{obj.id}_{obj.title.replace(' ', '_')}"
-                )
-                if result['success']:
-                    obj.imagekit_url = result['url']
-                    obj.imagekit_id = result['file_id']
-                    obj.save(update_fields=['imagekit_url', 'imagekit_id'])
+                IMAGEKIT_AVAILABLE = True
             except ImportError:
-                # ImageKit not available - skip upload
-                pass
-            except Exception as e:
-                # Log error but don't break admin
-                import logging
-                logger = logging.getLogger(__name__)
-                logger.error(f"ImageKit upload error for banner {obj.id}: {str(e)}")
+                IMAGEKIT_AVAILABLE = False
+                print("Warning: lib.imagekit_utils not available, skipping image upload")
+                return
+            # Title None ola bilər, ona görə yoxlayırıq
+            title_safe = obj.title.replace(' ', '_') if obj.title else 'banner'
+            result = imagekit_manager.upload_image(
+                obj.image, 
+                folder_path='banners',
+                filename=f"banner_{obj.id}_{title_safe}"
+            )
+            if result['success']:
+                obj.imagekit_url = result['url']
+                obj.imagekit_id = result['file_id']
+                obj.save(update_fields=['imagekit_url', 'imagekit_id'])
 
