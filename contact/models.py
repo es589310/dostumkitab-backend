@@ -1,6 +1,8 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
+from django.contrib.postgres.search import SearchVectorField
+from django.contrib.postgres.indexes import GinIndex
 
 
 
@@ -32,10 +34,16 @@ class ContactMessage(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Yaradılma tarixi")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Yenilənmə tarixi")
     
+    # Full-text search field
+    search_vector = SearchVectorField(null=True, blank=True, verbose_name="Axtarış Vektoru")
+    
     class Meta:
         verbose_name = "Əlaqə mesajı"
         verbose_name_plural = "Əlaqə mesajları"
         ordering = ['-created_at']
+        indexes = [
+            GinIndex(fields=["search_vector"]),
+        ]
     
     def __str__(self):
         if self.user:

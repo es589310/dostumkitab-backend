@@ -2,6 +2,7 @@ from rest_framework import generics, status, permissions
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.exceptions import TokenError
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
 from .models import Address
@@ -113,3 +114,27 @@ class AddressDetailView(generics.RetrieveUpdateDestroyAPIView):
         # Ünvanı silmək əvəzinə deaktiv edirik
         instance.is_active = False
         instance.save()
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def logout_view(request):
+    """İstifadəçi çıxışı"""
+    try:
+        # Refresh token-i al və blacklist-ə əlavə et
+        refresh_token = request.data.get('refresh')
+        if refresh_token:
+            token = RefreshToken(refresh_token)
+            token.blacklist()
+        
+        return Response({
+            'message': 'Uğurla çıxış etdiniz!'
+        }, status=status.HTTP_200_OK)
+        
+    except TokenError:
+        return Response({
+            'error': 'Token etibarsızdır!'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        return Response({
+            'error': 'Çıxış zamanı xəta baş verdi!'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

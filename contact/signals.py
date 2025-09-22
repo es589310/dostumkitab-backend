@@ -1,9 +1,17 @@
-from django.db.models.signals import post_save, pre_delete
+from django.db.models.signals import post_save
 from django.dispatch import receiver
-from django.core.files.storage import default_storage
-# SiteSettings artıq contact app-də yoxdur, settings app-ə köçürüldü
-import logging
+from django.contrib.postgres.search import SearchVector
+from .models import ContactMessage
 
-logger = logging.getLogger(__name__)
 
-# Logo-lar artıq settings app-də idarə olunur 
+@receiver(post_save, sender=ContactMessage)
+def update_contact_message_search_vector(sender, instance, **kwargs):
+    """Əlaqə mesajı yaradıldıqda və ya yeniləndikdə search vector yenilə"""
+    ContactMessage.objects.filter(pk=instance.pk).update(
+        search_vector=(
+            SearchVector("subject", weight="A") + 
+            SearchVector("message", weight="B") + 
+            SearchVector("name", weight="C") +
+            SearchVector("email", weight="D")
+        )
+    )

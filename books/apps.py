@@ -7,4 +7,4 @@ class BooksConfig(AppConfig):
     verbose_name = '📚 Kitablar'
     
     def ready(self):
-        pass 
+        import books.signals 

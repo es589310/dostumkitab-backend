@@ -5,7 +5,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Q
 from .models import Category, Book, BookReview, Banner
 from .serializers import CategorySerializer, CategoryTreeSerializer, BookListSerializer, BookDetailSerializer, BookReviewSerializer, BannerSerializer
-from .filters import BookFilter
+from .filters import BookFilter, FullTextSearchFilter, AdvancedSearchFilter
 from rest_framework import generics, filters, permissions
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
@@ -18,6 +18,7 @@ class CategoryListView(generics.ListAPIView):
     """1-ci mərhələ kateqoriyalar siyahısı (ana kateqoriyalar)"""
     queryset = Category.objects.filter(is_active=True, parent__isnull=True).order_by('order', 'name')
     serializer_class = CategorySerializer
+    filter_backends = [FullTextSearchFilter]
 
 class CategoryChildrenView(generics.ListAPIView):
     """Alt kateqoriyalar siyahısı"""
@@ -66,9 +67,8 @@ class BookListView(generics.ListAPIView):
     """Kitablar siyahısı"""
     queryset = Book.objects.filter(is_active=True).select_related('category', 'publisher').prefetch_related('authors')
     serializer_class = BookListSerializer
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filter_backends = [DjangoFilterBackend, FullTextSearchFilter, filters.OrderingFilter]
     filterset_class = BookFilter
-    search_fields = ['title', 'authors__name', 'description']
     ordering_fields = ['price', 'created_at', 'sales_count', 'views_count']
     ordering = ['-created_at']
     

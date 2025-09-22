@@ -1,6 +1,8 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.core.validators import MinValueValidator, MaxValueValidator
+from django.contrib.postgres.search import SearchVectorField
+from django.contrib.postgres.indexes import GinIndex
 
 class Category(models.Model):
     """Kitab kateqoriyaları - 3 mərhələli iyerarxik struktur"""
@@ -20,10 +22,16 @@ class Category(models.Model):
     is_active = models.BooleanField(default=True, verbose_name="Aktiv")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Yaradılma Tarixi")
     
+    # Full-text search field
+    search_vector = SearchVectorField(null=True, blank=True, verbose_name="Axtarış Vektoru")
+    
     class Meta:
         verbose_name = "Kateqoriya"
         verbose_name_plural = "Kateqoriyalar"
         ordering = ['level', 'order', 'name']
+        indexes = [
+            GinIndex(fields=["search_vector"]),
+        ]
     
     def __str__(self):
         return self.name
@@ -81,10 +89,16 @@ class Author(models.Model):
     photo_imagekit_id = models.CharField(max_length=100, blank=True, null=True, verbose_name="Foto ImageKit ID")
     nationality = models.CharField(max_length=100, blank=True, verbose_name="Milliyyət")
     
+    # Full-text search field
+    search_vector = SearchVectorField(null=True, blank=True, verbose_name="Axtarış Vektoru")
+    
     class Meta:
         verbose_name = "Müəllif"
         verbose_name_plural = "Müəlliflər"
         ordering = ['name']
+        indexes = [
+            GinIndex(fields=["search_vector"]),
+        ]
     
     def __str__(self):
         return self.name
@@ -97,10 +111,16 @@ class Publisher(models.Model):
     email = models.EmailField(blank=True, verbose_name="E-mail")
     website = models.URLField(blank=True, verbose_name="Veb sayt")
     
+    # Full-text search field
+    search_vector = SearchVectorField(null=True, blank=True, verbose_name="Axtarış Vektoru")
+    
     class Meta:
         verbose_name = "Nəşriyyat"
         verbose_name_plural = "Nəşriyyatlar"
         ordering = ['name']
+        indexes = [
+            GinIndex(fields=["search_vector"]),
+        ]
     
     def __str__(self):
         return self.name
@@ -158,10 +178,17 @@ class Book(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Əlavə Edilmə Tarixi")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Yenilənmə Tarixi")
     
+    # Full-text search fields
+    search_text = models.TextField(blank=True, verbose_name="Axtarış Mətni")
+    search_vector = SearchVectorField(null=True, blank=True, verbose_name="Axtarış Vektoru")
+    
     class Meta:
         verbose_name = "Kitab"
         verbose_name_plural = "Kitablar"
         ordering = ['-created_at']
+        indexes = [
+            GinIndex(fields=["search_vector"]),
+        ]
     
     def __str__(self):
         return self.title
